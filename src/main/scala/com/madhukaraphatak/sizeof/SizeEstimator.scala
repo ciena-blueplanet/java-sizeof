@@ -189,10 +189,10 @@ object SizeEstimator{
     var arrSize: Long = alignSize(objectSize + INT_SIZE)
 
     if (elementClass.isPrimitive) {
-      arrSize += alignSize(length * primitiveSize(elementClass))
+      arrSize += alignSize(length.toLong * primitiveSize(elementClass))
       state.size += arrSize
     } else {
-      arrSize += alignSize(length * pointerSize)
+      arrSize += alignSize(length.toLong * pointerSize)
       state.size += arrSize
 
       if (length <= ARRAY_SIZE_FOR_SAMPLING) {
@@ -255,9 +255,16 @@ object SizeEstimator{
         if (fieldClass.isPrimitive) {
           shellSize += primitiveSize(fieldClass)
         } else {
-          field.setAccessible(true) // Enable future get()'s on this field
-          shellSize += pointerSize
-          pointerFields = field :: pointerFields
+          try {
+            field.setAccessible(true) // Enable future get()'s on this field
+            shellSize += pointerSize
+            pointerFields = field :: pointerFields
+          } catch {
+            case _: SecurityException =>
+              // do nothing
+            case re: RuntimeException if re.getClass.getSimpleName == "InaccessibleObjectException" =>
+              // do nothing
+          }
         }
       }
     }
